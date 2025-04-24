@@ -3,7 +3,7 @@ ipeline {
 
     environment {
         DOCKER_IMAGE = "gerronc/simple-webpage"
-        DOCKER_CREDENTIALS = "docker-hub-credentials"  // Stored in Jenkins credentials
+        DOCKER_CREDENTIALS = "docker-hub-creds"  // Stored in Jenkins credentials
     }
 
     stages {
