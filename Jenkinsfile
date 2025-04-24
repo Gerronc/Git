@@ -9,7 +9,7 @@ ipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: 'https://github.com/Gerronc/Git.git'
+                git branch: 'main', url: 'https://github.com/Gerronc/Git.git'
             }
         }
 
