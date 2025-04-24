@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = "gerronc/static-web"
-        TAG = "latest"
+        TAG = "${BUILD_NUMBER}"  // Unique tag per build
     }
 
     stages {
@@ -28,7 +28,7 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
                 }
             }
         }
@@ -37,17 +37,36 @@ pipeline {
             steps {
                 script {
                     dockerImage.push()
+                    // Optional: update 'latest' tag too
+                    dockerImage.push("latest")
                 }
             }
         }
 
         stage('Deploy on EC2') {
             steps {
-                script {
-                    sh 'docker rm -f static-web || true'
-                    sh 'docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}'
+                sshagent(['ec2-ssh-creds']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@<EC2-IP-ADDRESS> '
+                            docker pull ${IMAGE_NAME}:${TAG} &&
+                            docker rm -f static-web || true &&
+                            docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}
+                        '
+                    """
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "Deployment succeeded! App is live."
+        }
+        failure {
+            echo "Build or deployment failed. Check logs for errors."
         }
     }
 }
