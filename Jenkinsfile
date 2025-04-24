@@ -1,40 +1,53 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2822
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+pipeline {
+    agent any
 
-\f0\fs24 \cf0 pipeline \{\
-    agent any\
-\
-    stages \{\
-        stage('Checkout') \{\
-            steps \{\
-                git branch: 'main', url: 'https://github.com/Gerronc/Git'\
-            \}\
-        \}\
-        stage('Build') \{\
-            steps \{\
-                echo "Building the project..."\
-                // Example: For Node.js\
-                // sh 'npm install'\
-            \}\
-        \}\
-        stage('Test') \{\
-            steps \{\
-                echo "Running tests..."\
-                // Example: For Node.js\
-                // sh 'npm test'\
-            \}\
-        \}\
-        stage('Deploy') \{\
-            steps \{\
-                echo "Deploying application..."\
-                // Example: For Docker deployment\
-                // sh 'docker-compose up -d'\
-            \}\
-        \}\
-    \}\
-\}\
+    environment {
+        IMAGE_NAME = "gerronc/static-web"
+        TAG = "latest"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/Gerronc/Git.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dockerImage = docker.build("${IMAGE_NAME}:${TAG}")
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    dockerImage.push()
+                }
+            }
+        }
+
+        stage('Deploy on EC2') {
+            steps {
+                script {
+                    sh 'docker rm -f static-web || true'
+                    sh 'docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}'
+                }
+            }
+        }
+    }
 }
