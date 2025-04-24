@@ -1,72 +1,69 @@
-pipeline {
-    agent any
+ipeline {
+    agent any  // Runs on any available agent
 
     environment {
-        IMAGE_NAME = "gerronc/static-web"
-        TAG = "${BUILD_NUMBER}"  // Unique tag per build
+        DOCKER_IMAGE = "gerronc/simple-webpage"
+        DOCKER_CREDENTIALS = "docker-hub-credentials"  // Stored in Jenkins credentials
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone Repository') {
             steps {
-                git 'https://github.com/Gerronc/Git.git'
+                git branch: 'master', url: 'https://github.com/Gerronc/Git.git'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 script {
-                    dockerImage = docker.build("${IMAGE_NAME}:${TAG}")
+                    docker.build("${DOCKER_IMAGE}:latest")
                 }
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'docker-hub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+                script {
+                    docker.withRegistry('https://registry-1.docker.io/v2/', DOCKER_CREDENTIALS) {
+                        echo "You are logged in to Docker Hub"
+                    }
                 }
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Push Image to Docker Hub') {
             steps {
                 script {
-                    dockerImage.push()
-                    // Optional: update 'latest' tag too
-                    dockerImage.push("latest")
+                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS) {
+                        docker.image("${DOCKER_IMAGE}:latest").push()
+                    }
                 }
             }
         }
 
-        stage('Deploy on EC2') {
+        stage('Deploy Container') {
             steps {
-                sshagent(['ec2-ssh-creds']) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ec2-user@<EC2-IP-ADDRESS> '
-                            docker pull ${IMAGE_NAME}:${TAG} &&
-                            docker rm -f static-web || true &&
-                            docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}
-                        '
-                    """
+                script {
+                    // Cleanup unused Docker images to free space
+                    sh "docker image prune -f"
+                    
+                    // Stop running container (if exists)
+                    sh "docker stop my-webpage-container || true"
+                    sh "docker rm my-webpage-container || true"
+
+                    // Run the new container
+                    sh "docker run -d --name my-webpage-container -p 80:80 ${DOCKER_IMAGE}:latest"
                 }
             }
         }
     }
 
     post {
-        always {
-            cleanWs()
-        }
         success {
-            echo "Deployment succeeded! App is live."
+            echo 'Deployment Successful!'
         }
         failure {
-            echo "Build or deployment failed. Check logs for errors."
+            echo 'Deployment Failed!'
         }
     }
 }
