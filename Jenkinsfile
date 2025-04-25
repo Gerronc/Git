@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'hhttps://github.com/Gerronc/Git'
+                git branch: 'main', url: 'https://github.com/Gerronc/Git'
             }
         }
 
