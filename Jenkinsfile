@@ -48,7 +48,7 @@ pipeline {
             steps {
                 sshagent(['ec2-ssh-creds']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ec2-user@YOUR.EC2.IP.HERE '
+                        ssh -o StrictHostKeyChecking=no ec2-user@http://13.59.164.117/ '
                             docker pull ${IMAGE_NAME}:${TAG} &&
                             docker rm -f static-web || true &&
                             docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}
