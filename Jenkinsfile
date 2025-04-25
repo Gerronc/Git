@@ -1,3 +1,5 @@
+def dockerImage  // Declare outside pipeline
+
 pipeline {
     agent any
 
@@ -9,8 +11,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Ensure the correct branch is checked out (main instead of master)
-                git branch: 'main', url: 'https://github.com/Gerronc/Git.git'
+                git 'https://github.com/Gerronc/Git.git'
             }
         }
 
@@ -43,4 +44,30 @@ pipeline {
             }
         }
 
-        stage
+        stage('Deploy on EC2') {
+            steps {
+                sshagent(['ec2-ssh-creds']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@YOUR.EC2.IP.HERE '
+                            docker pull ${IMAGE_NAME}:${TAG} &&
+                            docker rm -f static-web || true &&
+                            docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}
+                        '
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo "✅ Deployment succeeded! App is live."
+        }
+        failure {
+            echo "❌ Build or deployment failed. Check logs for details."
+        }
+    }
+}
