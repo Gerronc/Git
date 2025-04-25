@@ -1,3 +1,5 @@
+def dockerImage  // Declare outside pipeline
+
 pipeline {
     agent any
 
@@ -37,8 +39,7 @@ pipeline {
             steps {
                 script {
                     dockerImage.push()
-                    // Optional: update 'latest' tag too
-                    dockerImage.push("latest")
+                    dockerImage.push("latest")  // Optional: update latest tag
                 }
             }
         }
@@ -47,7 +48,7 @@ pipeline {
             steps {
                 sshagent(['ec2-ssh-creds']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ec2-user@<EC2-IP-ADDRESS> '
+                        ssh -o StrictHostKeyChecking=no ec2-user@YOUR.EC2.IP.HERE '
                             docker pull ${IMAGE_NAME}:${TAG} &&
                             docker rm -f static-web || true &&
                             docker run -d -p 80:80 --name static-web ${IMAGE_NAME}:${TAG}
@@ -63,10 +64,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Deployment succeeded! App is live."
+            echo "✅ Deployment succeeded! App is live."
         }
         failure {
-            echo "Build or deployment failed. Check logs for errors."
+            echo "❌ Build or deployment failed. Check logs for details."
         }
     }
 }
