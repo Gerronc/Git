@@ -2,14 +2,14 @@ pipeline {
     agent any  // Runs on any available agent
 
     environment {
-        DOCKER_IMAGE = "kbhola001/simple-webpage"
-        DOCKER_CREDENTIALS = "docker-hub-credentials"  // Stored in Jenkins credentials
+        DOCKER_IMAGE = "gerronc/simple-webpage"
+        DOCKER_CREDENTIALS = "docker-hub-creds"  // Stored in Jenkins credentials
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'master', url: 'https://github.com/kestonbhola/moregithublessons.git'
+                git branch: 'main', url: 'hhttps://github.com/Gerronc/Git'
             }
         }
 
