@@ -1,14 +1,8 @@
- # Start with a lightweight web server
+# Use an official Nginx image as the base
 FROM nginx:alpine
 
-# Remove the default Nginx web page
-RUN rm -rf /usr/share/nginx/html/*
+# Copy static files to the default Nginx public directory
+COPY ./public /usr/share/nginx/html
 
-# Copy your site files into Nginx web directory
-COPY . /usr/share/nginx/html
-
-# Expose port 80 to the outside
+# Expose port 80 for the web server
 EXPOSE 80
-
-# Start Nginx when container starts
-CMD ["nginx", "-g", "daemon off;"]
