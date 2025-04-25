@@ -1,9 +1,14 @@
-ipeline {
-    agent any  // Runs on any available agent
+pipeline {
+    agent any  // Can specify label if needed, e.g., agent { label 'docker' }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+    }
 
     environment {
         DOCKER_IMAGE = "gerronc/simple-webpage"
-        DOCKER_CREDENTIALS = "docker-hub-creds"  // Stored in Jenkins credentials
+        DOCKER_CREDENTIALS = "docker-hub-creds"  // Must match ID in Jenkins credentials
     }
 
     stages {
@@ -16,22 +21,12 @@ ipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:latest")
+                    docker.build("${DOCKER_IMAGE}:latest", ".")
                 }
             }
         }
 
-        stage('Login to Docker Hub') {
-            steps {
-                script {
-                    docker.withRegistry('https://registry-1.docker.io/v2/', DOCKER_CREDENTIALS) {
-                        echo "You are logged in to Docker Hub"
-                    }
-                }
-            }
-        }
-
-        stage('Push Image to Docker Hub') {
+        stage('Login and Push to Docker Hub') {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', DOCKER_CREDENTIALS) {
@@ -44,10 +39,10 @@ ipeline {
         stage('Deploy Container') {
             steps {
                 script {
-                    // Cleanup unused Docker images to free space
+                    // Clean up unused images to save space
                     sh "docker image prune -f"
-                    
-                    // Stop running container (if exists)
+
+                    // Stop and remove existing container (ignore errors)
                     sh "docker stop my-webpage-container || true"
                     sh "docker rm my-webpage-container || true"
 
@@ -60,10 +55,10 @@ ipeline {
 
     post {
         success {
-            echo 'Deployment Successful!'
+            echo '✅ Deployment Successful!'
         }
         failure {
-            echo 'Deployment Failed!'
+            echo '❌ Deployment Failed. Check the logs for details.'
         }
     }
 }
